@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>learnr</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <h1>learnr</h1>
+        <p id="sessionLabel">No session</p>
+      </div>
+      <form id="importForm" class="import-form">
+        <input id="csvFile" name="file" type="file" accept=".csv,text/csv">
+        <input id="deckName" name="deck_name" type="text" placeholder="Deck name">
+        <button type="submit">Import CSV</button>
+      </form>
+    </header>
+
+    <section class="controls">
+      <select id="deckSelect" aria-label="Deck"></select>
+      <input id="sessionLimit" type="number" min="1" max="200" value="20" aria-label="Session limit">
+      <button id="startSession">Start Review</button>
+    </section>
+
+    <section class="progress-wrap" aria-label="Session progress">
+      <div class="progress-meta">
+        <span id="progressText">0 / 0</span>
+        <span id="statusText">Import cards to begin.</span>
+      </div>
+      <div class="progress-track">
+        <div id="progressBar" class="progress-bar"></div>
+      </div>
+    </section>
+
+    <section class="study-layout">
+      <div class="canvas-wrap">
+        <canvas id="swipeCanvas" aria-label="Swipe review card"></canvas>
+      </div>
+      <aside class="review-panel">
+        <dl>
+          <div>
+            <dt>Direction</dt>
+            <dd id="directionText">-</dd>
+          </div>
+          <div>
+            <dt>Reviews</dt>
+            <dd id="reviewCountText">-</dd>
+          </div>
+          <div>
+            <dt>Tags</dt>
+            <dd id="tagsText">-</dd>
+          </div>
+        </dl>
+      </aside>
+    </section>
+  </main>
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>
