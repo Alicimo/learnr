@@ -56,21 +56,6 @@
         }
       );
 
-      devShells = forAllSystems (
-        system:
-        let
-          pkgs = import nixpkgs { inherit system; };
-        in
-        {
-          default = pkgs.mkShell {
-            packages = [
-              pkgs.uv
-              pkgs.python313
-            ];
-          };
-        }
-      );
-
-      nixosModules.default = import ./nix/module.nix { inherit self; };
+      nixosModules.default = import ./nix/module.nix;
     };
 }

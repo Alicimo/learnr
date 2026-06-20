@@ -1,5 +1,3 @@
-{ self }:
-
 {
   config,
   lib,
@@ -22,8 +20,8 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = self.packages.${pkgs.stdenv.hostPlatform.system}.default;
-      defaultText = lib.literalExpression "inputs.learnr.packages.\${pkgs.stdenv.hostPlatform.system}.default";
+      default = pkgs.callPackage ./package.nix { };
+      defaultText = lib.literalExpression "pkgs.callPackage ./nix/package.nix { }";
       description = "The learnr package to run.";
     };
 
