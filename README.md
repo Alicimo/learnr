@@ -17,6 +17,39 @@ By default the SQLite database is created at `./learnr.sqlite3`. Override it wit
 LEARNR_DB_PATH=/path/to/learnr.sqlite3 uv run uvicorn learnr.main:app --reload
 ```
 
+## NixOS Deployment
+
+This repository exposes a flake package and a NixOS module. A server flake can
+target the GitHub repository directly:
+
+```nix
+{
+  inputs.learnr.url = "github:your-user/learnr";
+
+  outputs =
+    { nixpkgs, learnr, ... }:
+    {
+      nixosConfigurations.server = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [
+          learnr.nixosModules.default
+          {
+            services.learnr = {
+              enable = true;
+              host = "127.0.0.1";
+              port = 8000;
+              databasePath = "/var/lib/learnr/learnr.sqlite3";
+            };
+          }
+        ];
+      };
+    };
+}
+```
+
+The module only manages the application service. Configure TLS, reverse proxying,
+firewall rules, and backups in the server configuration.
+
 ## Scheduler Settings
 
 The v0 scheduler is a simple binary placeholder, not a full Anki/FSRS implementation. Its tuning values can be overridden with environment variables using the `LEARNR_SCHEDULER_` prefix, for example:

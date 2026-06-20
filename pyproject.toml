@@ -24,6 +24,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["learnr"]
+artifacts = ["learnr/static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
