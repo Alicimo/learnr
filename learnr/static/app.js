@@ -38,6 +38,10 @@ function setStatus(message) {
   statusText.textContent = message;
 }
 
+function setMode(mode) {
+  document.body.dataset.mode = mode;
+}
+
 function renderProgressSegments() {
   progressBar.innerHTML = "";
   for (const card of state.sessionCards) {
@@ -93,9 +97,11 @@ function showNextQueuedCard() {
   setCurrentCard(card);
   updateProgress(state.session);
   if (!card) {
+    setMode("setup");
     setStatus(state.session?.target_count ? "Session complete." : "No due cards.");
     return;
   }
+  setMode("reviewing");
   setStatus(`${state.queue.length} card${state.queue.length === 1 ? "" : "s"} remaining.`);
 }
 
@@ -163,6 +169,7 @@ importForm.addEventListener("submit", async (event) => {
   }
 });
 
+setMode("setup");
 await refreshDecks();
 updateProgress(null);
 updateCardDetails(null);
