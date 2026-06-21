@@ -16,6 +16,7 @@ dependencies = [
 dev = [
     "httpx>=0.27.2",
     "pytest>=8.3.3",
+    "ruff>=0.15.15",
 ]
 
 [build-system]
@@ -28,3 +29,28 @@ artifacts = ["learnr/static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+
+# https://docs.astral.sh/ruff/rules/
+[tool.ruff.lint]
+select = [
+    "E",   # flake8
+    "F",   # pyflakes
+    "I",   # isort
+    "S",   # bandit
+    "ANN", # flake8 annotations
+    "PTH", # flake8 pathlib
+]
+ignore = [
+    "ANN003", # **kwargs annotation
+    "PTH123", # built-in open
+]
+unfixable = ["F401"] # unused import (don't remove on file save)
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "S101",   # Allow asserts
+    "ANN201", # Return type annotation
+]
