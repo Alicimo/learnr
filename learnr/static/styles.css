@@ -110,10 +110,25 @@ p {
 }
 
 .progress-bar {
-  width: 0;
+  display: flex;
+  gap: 2px;
+  width: 100%;
   height: 100%;
+}
+
+.progress-segment {
+  flex: 1 1 0;
+  min-width: 2px;
+  background: transparent;
+  transition: background 180ms ease;
+}
+
+.progress-segment.passed {
   background: #20a06b;
-  transition: width 180ms ease;
+}
+
+.progress-segment.failed {
+  background: #d64545;
 }
 
 .study-layout {

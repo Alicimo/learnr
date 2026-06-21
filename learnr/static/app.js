@@ -1,4 +1,4 @@
-import { answerCard, getNextCard, importCsv, listDecks, startReviewSession } from "./api.js";
+import { answerCard, importCsv, listDecks, startReviewSession } from "./api.js";
 import { SwipeCardCanvas } from "./swipe-card.js";
 
 const deckSelect = document.querySelector("#deckSelect");
@@ -18,6 +18,10 @@ const tagsText = document.querySelector("#tagsText");
 const state = {
   session: null,
   currentCard: null,
+  sessionCards: [],
+  cardById: new Map(),
+  queue: [],
+  progress: new Map(),
 };
 
 const canvas = new SwipeCardCanvas(document.querySelector("#swipeCanvas"), {
@@ -34,11 +38,20 @@ function setStatus(message) {
   statusText.textContent = message;
 }
 
+function renderProgressSegments() {
+  progressBar.innerHTML = "";
+  for (const card of state.sessionCards) {
+    const segment = document.createElement("span");
+    segment.className = `progress-segment ${state.progress.get(card.id) || "pending"}`;
+    progressBar.append(segment);
+  }
+}
+
 function updateProgress(session) {
   const target = session?.target_count || 0;
-  const completed = session?.completed_count || 0;
+  const completed = [...state.progress.values()].filter((status) => status === "passed").length;
   progressText.textContent = `${completed} / ${target}`;
-  progressBar.style.width = target ? `${Math.round((completed / target) * 100)}%` : "0";
+  renderProgressSegments();
   sessionLabel.textContent = session ? `Session ${session.id}` : "No session";
 }
 
@@ -69,17 +82,31 @@ async function refreshDecks() {
   }
 }
 
-function loadSessionPayload(payload) {
-  state.session = payload.session;
-  state.currentCard = payload.card;
-  updateProgress(payload.session);
-  updateCardDetails(payload.card);
-  canvas.setCard(payload.card);
-  if (!payload.card) {
-    setStatus(payload.session.target_count ? "Session complete." : "No due cards.");
-  } else {
-    setStatus(`${payload.remaining} card${payload.remaining === 1 ? "" : "s"} remaining.`);
+function setCurrentCard(card) {
+  state.currentCard = card;
+  updateCardDetails(card);
+  canvas.setCard(card);
+}
+
+function showNextQueuedCard() {
+  const card = state.cardById.get(state.queue[0]) || null;
+  setCurrentCard(card);
+  updateProgress(state.session);
+  if (!card) {
+    setStatus(state.session?.target_count ? "Session complete." : "No due cards.");
+    return;
   }
+  setStatus(`${state.queue.length} card${state.queue.length === 1 ? "" : "s"} remaining.`);
+}
+
+function loadSessionPayload(payload) {
+  const cards = payload.cards?.length ? payload.cards : payload.card ? [payload.card] : [];
+  state.session = payload.session;
+  state.sessionCards = cards;
+  state.cardById = new Map(cards.map((card) => [card.id, card]));
+  state.queue = cards.map((card) => card.id);
+  state.progress = new Map(cards.map((card) => [card.id, "pending"]));
+  showNextQueuedCard();
 }
 
 async function submitAnswer(answer) {
@@ -95,9 +122,15 @@ async function submitAnswer(answer) {
       time_to_grade_ms: answer.timeToGradeMs,
     });
     state.session = result.session;
-    updateProgress(result.session);
-    const next = await getNextCard(state.session.id);
-    loadSessionPayload(next);
+    const cardId = answer.card.id;
+    state.queue = state.queue.filter((queuedCardId) => queuedCardId !== cardId);
+    if (result.correct) {
+      state.progress.set(cardId, "passed");
+    } else {
+      state.progress.set(cardId, "failed");
+      state.queue.push(cardId);
+    }
+    showNextQueuedCard();
   } catch (error) {
     setStatus(error.message);
   }

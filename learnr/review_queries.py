@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import Select, select
 from sqlalchemy.orm import selectinload
 
 from learnr.models import Card, CardState, ReviewSession, card_decks, utc_now
@@ -21,7 +21,30 @@ def to_card_read(card: Card) -> CardRead:
     )
 
 
-def due_cards_query(deck_id: int | None = None):
+def _card_query(deck_id: int | None = None) -> Select[tuple[Card]]:
+    stmt = (
+        select(Card)
+        .join(CardState)
+        .options(selectinload(Card.state), selectinload(Card.tags))
+    )
+    if deck_id is not None:
+        stmt = stmt.join(card_decks).where(card_decks.c.deck_id == deck_id)
+    return stmt
+
+
+def due_review_cards_query(deck_id: int | None = None) -> Select[tuple[Card]]:
+    return (
+        _card_query(deck_id)
+        .where(CardState.review_count > 0, CardState.due_at <= utc_now())
+        .order_by(CardState.due_at.asc(), Card.id.asc())
+    )
+
+
+def new_cards_query(deck_id: int | None = None) -> Select[tuple[Card]]:
+    return _card_query(deck_id).where(CardState.review_count == 0).order_by(Card.id.asc())
+
+
+def due_cards_query(deck_id: int | None = None) -> Select[tuple[Card]]:
     stmt = (
         select(Card)
         .join(CardState)

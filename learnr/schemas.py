@@ -60,6 +60,7 @@ class ReviewAnswerRead(BaseModel):
 class SessionNextCardRead(BaseModel):
     session: ReviewSessionRead
     card: CardRead | None
+    cards: list[CardRead] = Field(default_factory=list)
     remaining: int
 
 

@@ -1,6 +1,6 @@
+import os
 from collections.abc import Generator
 from pathlib import Path
-import os
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker

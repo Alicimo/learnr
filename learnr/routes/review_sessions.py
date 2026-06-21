@@ -1,12 +1,17 @@
 from datetime import timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import distinct, func, select
 from sqlalchemy.orm import Session, selectinload
 
 from learnr.db import get_session
 from learnr.models import Card, Deck, Review, ReviewSession, utc_now
-from learnr.review_queries import due_cards_query, to_card_read, to_session_read
+from learnr.review_queries import (
+    due_review_cards_query,
+    new_cards_query,
+    to_card_read,
+    to_session_read,
+)
 from learnr.scheduler import schedule_binary
 from learnr.schemas import (
     ReviewAnswerCreate,
@@ -19,20 +24,31 @@ router = APIRouter(prefix="/api/review-sessions", tags=["review sessions"])
 
 
 @router.post("", response_model=SessionNextCardRead)
-def create_review_session(payload: ReviewSessionCreate, db: Session = Depends(get_session)) -> SessionNextCardRead:
+def create_review_session(
+    payload: ReviewSessionCreate, db: Session = Depends(get_session)
+) -> SessionNextCardRead:
     if payload.deck_id is not None and db.get(Deck, payload.deck_id) is None:
         raise HTTPException(status_code=404, detail="Deck not found.")
 
-    due_cards = list(db.scalars(due_cards_query(payload.deck_id).limit(payload.limit)))
-    review_session = ReviewSession(deck_id=payload.deck_id, target_count=len(due_cards))
+    review_cards = list(db.scalars(due_review_cards_query(payload.deck_id).limit(payload.limit)))
+    remaining_limit = payload.limit - len(review_cards)
+    new_cards = (
+        list(db.scalars(new_cards_query(payload.deck_id).limit(remaining_limit)))
+        if remaining_limit > 0
+        else []
+    )
+    selected_cards = [*review_cards, *new_cards]
+
+    review_session = ReviewSession(deck_id=payload.deck_id, target_count=len(selected_cards))
     db.add(review_session)
     db.commit()
     db.refresh(review_session)
 
     return SessionNextCardRead(
         session=to_session_read(review_session),
-        card=to_card_read(due_cards[0]) if due_cards else None,
-        remaining=len(due_cards),
+        card=to_card_read(selected_cards[0]) if selected_cards else None,
+        cards=[to_card_read(card) for card in selected_cards],
+        remaining=len(selected_cards),
     )
 
 
@@ -49,11 +65,14 @@ def get_next_card(session_id: int, db: Session = Depends(get_session)) -> Sessio
             db.refresh(review_session)
         return SessionNextCardRead(session=to_session_read(review_session), card=None, remaining=0)
 
-    card = db.scalars(due_cards_query(review_session.deck_id).limit(1)).first()
+    card = db.scalars(due_review_cards_query(review_session.deck_id).limit(1)).first()
+    if card is None:
+        card = db.scalars(new_cards_query(review_session.deck_id).limit(1)).first()
     remaining = max(0, review_session.target_count - review_session.completed_count)
     return SessionNextCardRead(
         session=to_session_read(review_session),
         card=to_card_read(card) if card else None,
+        cards=[to_card_read(card)] if card else [],
         remaining=remaining if card else 0,
     )
 
@@ -69,9 +88,7 @@ def answer_card(
         raise HTTPException(status_code=404, detail="Session not found.")
 
     card = db.scalar(
-        select(Card)
-        .options(selectinload(Card.state))
-        .where(Card.id == payload.card_id)
+        select(Card).options(selectinload(Card.state)).where(Card.id == payload.card_id)
     )
     if card is None:
         raise HTTPException(status_code=404, detail="Card not found.")
@@ -113,7 +130,14 @@ def answer_card(
         ease_after=scheduled.ease_factor,
     )
     db.add(review)
-    review_session.completed_count += 1
+    db.flush()
+
+    review_session.completed_count = db.scalar(
+        select(func.count(distinct(Review.card_id))).where(
+            Review.session_id == review_session.id,
+            Review.correct.is_(True),
+        )
+    )
     if review_session.completed_count >= review_session.target_count:
         review_session.completed_at = utc_now()
 

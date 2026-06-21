@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 
 from learnr.models import Card, CardState, Deck, Note, Tag, utc_now
 
-
 DEFAULT_DECK_NAME = "Imported"
 
 
@@ -124,7 +123,9 @@ def get_or_create_card(
     return card
 
 
-def import_csv_text(session: Session, csv_text: str, fallback_deck_name: str | None = None) -> ImportSummaryData:
+def import_csv_text(
+    session: Session, csv_text: str, fallback_deck_name: str | None = None
+) -> ImportSummaryData:
     reader = csv.DictReader(StringIO(csv_text))
     if not reader.fieldnames:
         raise ValueError("CSV must include a header row.")
@@ -137,7 +138,9 @@ def import_csv_text(session: Session, csv_text: str, fallback_deck_name: str | N
     summary = ImportSummaryData()
 
     for raw_row in reader:
-        row = {key.strip().casefold(): (value or "").strip() for key, value in raw_row.items() if key}
+        row = {
+            key.strip().casefold(): (value or "").strip() for key, value in raw_row.items() if key
+        }
         front = row.get("front", "")
         back = row.get("back", "")
         if not front or not back:
@@ -148,7 +151,10 @@ def import_csv_text(session: Session, csv_text: str, fallback_deck_name: str | N
         deck = get_or_create_deck(session, deck_name, summary)
         summary.deck_ids.add(deck.id)
 
-        tags = [get_or_create_tag(session, tag_name, summary) for tag_name in split_tags(row.get("tags"))]
+        tags = [
+            get_or_create_tag(session, tag_name, summary)
+            for tag_name in split_tags(row.get("tags"))
+        ]
         source_language = row.get("source_language") or None
         target_language = row.get("target_language") or None
 

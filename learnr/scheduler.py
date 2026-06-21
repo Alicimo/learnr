@@ -45,7 +45,9 @@ def schedule_binary(
     else:
         lapse_count += 1
         interval_days = settings.failed_interval_days
-        ease_factor = max(settings.minimum_ease_factor, ease_factor - settings.incorrect_ease_penalty)
+        ease_factor = max(
+            settings.minimum_ease_factor, ease_factor - settings.incorrect_ease_penalty
+        )
 
     if correct:
         due_at = answered_at + timedelta(days=interval_days)

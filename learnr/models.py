@@ -138,7 +138,9 @@ class CardState(Base):
     difficulty: Mapped[float | None] = mapped_column(Float, nullable=True)
     review_count: Mapped[int] = mapped_column(Integer, default=0)
     lapse_count: Mapped[int] = mapped_column(Integer, default=0)
-    last_reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     card: Mapped[Card] = relationship(back_populates="state")
 
@@ -162,7 +164,9 @@ class Review(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     card_id: Mapped[int] = mapped_column(ForeignKey("cards.id"), index=True)
     deck_id: Mapped[int | None] = mapped_column(ForeignKey("decks.id"), nullable=True, index=True)
-    session_id: Mapped[int | None] = mapped_column(ForeignKey("review_sessions.id"), nullable=True, index=True)
+    session_id: Mapped[int | None] = mapped_column(
+        ForeignKey("review_sessions.id"), nullable=True, index=True
+    )
     shown_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     revealed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     answered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
