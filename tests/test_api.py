@@ -2,14 +2,17 @@ from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
+from pytest import MonkeyPatch
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from learnr import review_queries
 from learnr.db import Base, get_session
 from learnr.importer import import_csv_text
 from learnr.main import app
 from learnr.models import Card, Deck, Review
+from learnr.routes import review_sessions
 
 
 def make_test_client(csv_text: str) -> tuple[TestClient, sessionmaker[Session]]:
@@ -141,7 +144,8 @@ def test_review_session_start_returns_all_selected_cards():
         app.dependency_overrides.clear()
 
 
-def test_review_session_selects_due_reviews_before_new_cards():
+def test_review_session_selects_due_reviews_before_new_cards(monkeypatch: MonkeyPatch):
+    monkeypatch.setattr(review_sessions.random, "shuffle", lambda cards: None)
     client, TestingSession = make_test_client(
         "front,back,deck\nApfel,apple,German\nBuch,book,German\nHaus,house,German\n"
     )
@@ -160,7 +164,9 @@ def test_review_session_selects_due_reviews_before_new_cards():
         app.dependency_overrides.clear()
 
 
-def test_review_session_pads_with_new_cards_after_due_reviews():
+def test_review_session_pads_with_new_cards_after_due_reviews(monkeypatch: MonkeyPatch):
+    monkeypatch.setattr(review_queries, "random_order", lambda: Card.id.asc())
+    monkeypatch.setattr(review_sessions.random, "shuffle", lambda cards: None)
     client, TestingSession = make_test_client(
         "front,back,deck\nApfel,apple,German\nBuch,book,German\n"
     )
@@ -178,7 +184,10 @@ def test_review_session_pads_with_new_cards_after_due_reviews():
         app.dependency_overrides.clear()
 
 
-def test_review_session_does_not_include_new_cards_when_due_reviews_fill_limit():
+def test_review_session_does_not_include_new_cards_when_due_reviews_fill_limit(
+    monkeypatch: MonkeyPatch,
+):
+    monkeypatch.setattr(review_sessions.random, "shuffle", lambda cards: None)
     client, TestingSession = make_test_client(
         "front,back,deck\nApfel,apple,German\nBuch,book,German\n"
     )
@@ -197,7 +206,93 @@ def test_review_session_does_not_include_new_cards_when_due_reviews_fill_limit()
         app.dependency_overrides.clear()
 
 
-def test_review_session_applies_deck_filter_to_reviews_and_new_cards():
+def test_review_session_randomizes_new_card_selection(monkeypatch: MonkeyPatch):
+    monkeypatch.setattr(review_queries, "random_order", lambda: Card.id.desc())
+    monkeypatch.setattr(review_sessions.random, "shuffle", lambda cards: None)
+    client, _ = make_test_client(
+        "front,back,deck\nApfel,apple,German\nBuch,book,German\nHaus,house,German\n"
+    )
+    try:
+        response = client.post("/api/review-sessions", json={"limit": 2})
+
+        assert response.status_code == 200
+        cards = response.json()["cards"]
+        assert [card["prompt_text"] for card in cards] == ["house", "Haus"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_review_session_randomizes_due_review_ties(monkeypatch: MonkeyPatch):
+    monkeypatch.setattr(review_queries, "random_order", lambda: Card.id.desc())
+    monkeypatch.setattr(review_sessions.random, "shuffle", lambda cards: None)
+    client, TestingSession = make_test_client(
+        "front,back,deck\nApfel,apple,German\nBuch,book,German\n"
+    )
+    now = datetime.now(timezone.utc)
+    due_at = now - timedelta(days=1)
+    set_card_state(TestingSession, "Apfel", review_count=1, due_at=due_at)
+    set_card_state(TestingSession, "Buch", review_count=1, due_at=due_at)
+
+    try:
+        response = client.post("/api/review-sessions", json={"limit": 2})
+
+        assert response.status_code == 200
+        cards = response.json()["cards"]
+        assert [card["prompt_text"] for card in cards] == ["Buch", "Apfel"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_review_session_older_due_cards_still_fill_limit_before_later_due_cards(
+    monkeypatch: MonkeyPatch,
+):
+    monkeypatch.setattr(review_queries, "random_order", lambda: Card.id.desc())
+    monkeypatch.setattr(review_sessions.random, "shuffle", lambda cards: None)
+    client, TestingSession = make_test_client(
+        "front,back,deck\nApfel,apple,German\nBuch,book,German\nHaus,house,German\n"
+    )
+    now = datetime.now(timezone.utc)
+    set_card_state(TestingSession, "Apfel", review_count=1, due_at=now - timedelta(days=3))
+    set_card_state(TestingSession, "Buch", review_count=1, due_at=now - timedelta(days=2))
+    set_card_state(TestingSession, "Haus", review_count=1, due_at=now - timedelta(days=1))
+
+    try:
+        response = client.post("/api/review-sessions", json={"limit": 2})
+
+        assert response.status_code == 200
+        cards = response.json()["cards"]
+        assert [card["prompt_text"] for card in cards] == ["Apfel", "Buch"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_review_session_shuffles_selected_cards_before_returning(monkeypatch: MonkeyPatch):
+    monkeypatch.setattr(review_queries, "random_order", lambda: Card.id.asc())
+
+    def reverse_cards(cards: list[object]) -> None:
+        cards.reverse()
+
+    monkeypatch.setattr(review_sessions.random, "shuffle", reverse_cards)
+    client, TestingSession = make_test_client(
+        "front,back,deck\nApfel,apple,German\nBuch,book,German\n"
+    )
+    now = datetime.now(timezone.utc)
+    set_card_state(TestingSession, "Buch", review_count=1, due_at=now - timedelta(days=1))
+
+    try:
+        response = client.post("/api/review-sessions", json={"limit": 3})
+
+        assert response.status_code == 200
+        data = response.json()
+        assert [card["prompt_text"] for card in data["cards"]] == ["apple", "Apfel", "Buch"]
+        assert data["card"] == data["cards"][0]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_review_session_applies_deck_filter_to_reviews_and_new_cards(monkeypatch: MonkeyPatch):
+    monkeypatch.setattr(review_queries, "random_order", lambda: Card.id.asc())
+    monkeypatch.setattr(review_sessions.random, "shuffle", lambda cards: None)
     client, TestingSession = make_test_client(
         "front,back,deck\nApfel,apple,German\nLibro,book,Spanish\n"
     )

@@ -1,3 +1,4 @@
+import random
 from datetime import timezone
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -38,6 +39,7 @@ def create_review_session(
         else []
     )
     selected_cards = [*review_cards, *new_cards]
+    random.shuffle(selected_cards)
 
     review_session = ReviewSession(deck_id=payload.deck_id, target_count=len(selected_cards))
     db.add(review_session)

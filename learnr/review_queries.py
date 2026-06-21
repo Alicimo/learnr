@@ -1,4 +1,4 @@
-from sqlalchemy import Select, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.orm import selectinload
 
 from learnr.models import Card, CardState, ReviewSession, card_decks, utc_now
@@ -32,16 +32,20 @@ def _card_query(deck_id: int | None = None) -> Select[tuple[Card]]:
     return stmt
 
 
+def random_order() -> object:
+    return func.random()
+
+
 def due_review_cards_query(deck_id: int | None = None) -> Select[tuple[Card]]:
     return (
         _card_query(deck_id)
         .where(CardState.review_count > 0, CardState.due_at <= utc_now())
-        .order_by(CardState.due_at.asc(), Card.id.asc())
+        .order_by(CardState.due_at.asc(), random_order())
     )
 
 
 def new_cards_query(deck_id: int | None = None) -> Select[tuple[Card]]:
-    return _card_query(deck_id).where(CardState.review_count == 0).order_by(Card.id.asc())
+    return _card_query(deck_id).where(CardState.review_count == 0).order_by(random_order())
 
 
 def due_cards_query(deck_id: int | None = None) -> Select[tuple[Card]]:
@@ -50,7 +54,7 @@ def due_cards_query(deck_id: int | None = None) -> Select[tuple[Card]]:
         .join(CardState)
         .options(selectinload(Card.state), selectinload(Card.tags))
         .where(CardState.due_at <= utc_now())
-        .order_by(CardState.due_at.asc(), Card.id.asc())
+        .order_by(CardState.due_at.asc(), random_order())
     )
     if deck_id is not None:
         stmt = stmt.join(card_decks).where(card_decks.c.deck_id == deck_id)
