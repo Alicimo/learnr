@@ -32,6 +32,10 @@ def register_models() -> None:
 def init_db() -> None:
     register_models()
     Base.metadata.create_all(bind=engine)
+    from learnr.bootstrap import seed_starter_decks_if_empty
+
+    with SessionLocal() as session:
+        seed_starter_decks_if_empty(session)
 
 
 def get_session() -> Generator[Session]:

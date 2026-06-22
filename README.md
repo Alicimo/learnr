@@ -17,6 +17,9 @@ By default the SQLite database is created at `./learnr.sqlite3`. Override it wit
 LEARNR_DB_PATH=/path/to/learnr.sqlite3 uv run uvicorn learnr.main:app --reload
 ```
 
+On first startup with an empty database, learnr automatically imports the bundled
+Goethe A1 starter deck so a fresh deployment has review cards immediately.
+
 ## NixOS Deployment
 
 This repository exposes a flake package and a NixOS module. A server flake can
@@ -70,4 +73,4 @@ Buch,book,German A1,noun,de,en
 
 Required columns are `front` and `back`. `deck`, `tags`, `source_language`, and `target_language` are optional. Every row creates or reuses a note and generates forward and reverse cards. Cards are deduplicated and can belong to multiple decks.
 
-The bundled Goethe A1 CSV at `data/imports/goethe_a1_wordlist.csv` is based on the Goethe-Institut A1 word list, with English translations adapted from `patsytau/anki_german_a1_vocab` under CC BY-SA 4.0.
+The bundled Goethe A1 CSV is based on the Goethe-Institut A1 word list, with English translations adapted from `patsytau/anki_german_a1_vocab` under CC BY-SA 4.0.

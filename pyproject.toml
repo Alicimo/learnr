@@ -25,7 +25,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["learnr"]
-artifacts = ["learnr/static/*"]
+artifacts = [
+    "learnr/static/*",
+    "learnr/starter_decks/*.csv",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
