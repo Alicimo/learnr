@@ -11,6 +11,22 @@ class DeckRead(BaseModel):
     created_at: datetime
 
 
+class DeckSummary(BaseModel):
+    id: int | None
+    name: str
+    total_cards: int
+    reviewed_cards: int
+    due_review_cards: int
+    new_cards: int
+    due_forward_cards: int
+    due_reverse_cards: int
+
+
+class DeckSummaryRead(BaseModel):
+    total: DeckSummary
+    decks: list[DeckSummary]
+
+
 class CardRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

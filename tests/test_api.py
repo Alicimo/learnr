@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from learnr import review_queries
+from learnr.bootstrap import seed_starter_decks_if_empty
 from learnr.db import Base, get_session
 from learnr.importer import import_csv_text
 from learnr.main import app
@@ -65,6 +66,76 @@ def set_card_state(
         card.state.review_count = review_count
         card.state.due_at = due_at
         session.commit()
+
+
+def test_deck_summary_counts_due_reviews_new_cards_and_deck_breakdown():
+    client, TestingSession = make_test_client(
+        "front,back,deck\nApfel,apple,German\nLibro,book,Spanish\n"
+    )
+    now = datetime.now(timezone.utc)
+    set_card_state(TestingSession, "Apfel", review_count=1, due_at=now - timedelta(days=1))
+    set_card_state(TestingSession, "apple", review_count=2, due_at=now + timedelta(days=1))
+    set_card_state(TestingSession, "Libro", review_count=1, due_at=now - timedelta(days=2))
+
+    try:
+        response = client.get("/api/decks/summary")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == {
+            "id": None,
+            "name": "All Decks",
+            "total_cards": 4,
+            "reviewed_cards": 3,
+            "due_review_cards": 2,
+            "new_cards": 1,
+            "due_forward_cards": 2,
+            "due_reverse_cards": 0,
+        }
+
+        decks = {deck["name"]: deck for deck in data["decks"]}
+        assert decks["German"]["total_cards"] == 2
+        assert decks["German"]["reviewed_cards"] == 2
+        assert decks["German"]["due_review_cards"] == 1
+        assert decks["German"]["new_cards"] == 0
+        assert decks["German"]["due_forward_cards"] == 1
+        assert decks["German"]["due_reverse_cards"] == 0
+        assert decks["Spanish"]["total_cards"] == 2
+        assert decks["Spanish"]["reviewed_cards"] == 1
+        assert decks["Spanish"]["due_review_cards"] == 1
+        assert decks["Spanish"]["new_cards"] == 1
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_deck_summary_counts_fresh_starter_deck_cards_as_new():
+    engine = create_engine(
+        "sqlite+pysqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    testing_session = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+
+    with testing_session() as session:
+        assert seed_starter_decks_if_empty(session) is True
+
+    def override_session() -> Iterator[Session]:
+        with testing_session() as session:
+            yield session
+
+    app.dependency_overrides[get_session] = override_session
+    client = TestClient(app)
+    try:
+        response = client.get("/api/decks/summary")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"]["total_cards"] == 1480
+        assert data["total"]["new_cards"] == 1480
+        assert data["total"]["reviewed_cards"] == 0
+    finally:
+        app.dependency_overrides.clear()
 
 
 def test_review_session_records_answer_timings():

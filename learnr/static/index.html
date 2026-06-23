@@ -11,19 +11,42 @@
     <header class="topbar">
       <div>
         <h1>learnr</h1>
-        <p id="sessionLabel">No session</p>
       </div>
-      <form id="importForm" class="import-form">
-        <input id="csvFile" name="file" type="file" accept=".csv,text/csv">
-        <input id="deckName" name="deck_name" type="text" placeholder="Deck name">
-        <button type="submit">Import CSV</button>
-      </form>
+      <button id="openImportDialog" type="button">Import Deck</button>
     </header>
 
-    <section class="controls">
-      <select id="deckSelect" aria-label="Deck"></select>
-      <input id="sessionLimit" type="number" min="1" max="200" value="20" aria-label="Session limit">
-      <button id="startSession">Start Review</button>
+    <section class="dashboard" aria-label="Deck overview">
+      <div class="dashboard-header">
+        <div>
+          <h2>Today</h2>
+          <p id="dashboardStatus">Loading deck summary...</p>
+        </div>
+        <label class="session-limit-control">
+          Session size
+          <input id="sessionLimit" type="number" min="1" max="200" value="10" aria-label="Session size">
+        </label>
+      </div>
+
+      <div class="summary-grid" aria-label="Today summary">
+        <div class="summary-item">
+          <span class="summary-value" id="totalDueReviews">0</span>
+          <span class="summary-label">due reviews</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-value" id="totalNewCards">0</span>
+          <span class="summary-label">new cards</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-value" id="totalCards">0</span>
+          <span class="summary-label">cards</span>
+        </div>
+      </div>
+
+      <div class="deck-list-header">
+        <h2>Decks</h2>
+        <button id="startAllSession" type="button">Start Review</button>
+      </div>
+      <div id="deckList" class="deck-list"></div>
     </section>
 
     <section class="progress-wrap" aria-label="Session progress">
@@ -58,6 +81,31 @@
       </aside>
     </section>
   </main>
+
+  <dialog id="importDialog" aria-labelledby="importDialogTitle" aria-describedby="importDialogHelp">
+    <form id="importForm" class="import-form" method="dialog">
+      <div class="modal-header">
+        <div>
+          <h2 id="importDialogTitle">Import deck</h2>
+          <p id="importDialogHelp">Choose a CSV file with front/back columns. A deck column is optional.</p>
+        </div>
+        <button class="secondary-button icon-button" id="closeImportDialog" type="button" aria-label="Close import dialog">x</button>
+      </div>
+      <label>
+        CSV file
+        <input id="csvFile" name="file" type="file" accept=".csv,text/csv">
+      </label>
+      <label>
+        Deck name
+        <input id="deckName" name="deck_name" type="text" placeholder="Optional">
+      </label>
+      <p id="importError" class="form-error" role="alert"></p>
+      <div class="modal-actions">
+        <button class="secondary-button" id="cancelImport" type="button">Cancel</button>
+        <button id="confirmImport" type="submit">Import deck</button>
+      </div>
+    </form>
+  </dialog>
   <script type="module" src="/static/app.js"></script>
 </body>
 </html>

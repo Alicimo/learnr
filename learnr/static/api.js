@@ -17,6 +17,10 @@ export function listDecks() {
   return fetchJson("/api/decks");
 }
 
+export function getDeckSummary() {
+  return fetchJson("/api/decks/summary");
+}
+
 export async function importCsv(file, deckName) {
   const form = new FormData();
   form.append("file", file);
