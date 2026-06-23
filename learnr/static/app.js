@@ -214,8 +214,21 @@ function renderDashboard(summary) {
 
 async function refreshDashboard() {
   setDashboardStatus("Loading deck summary...");
-  const summary = await getDeckSummary();
-  renderDashboard(summary);
+  try {
+    const summary = await getDeckSummary();
+    renderDashboard(summary);
+    return summary;
+  } catch (error) {
+    startAllSessionButton.disabled = true;
+    startAllSessionButton.textContent = "Start Review";
+    deckList.innerHTML = "";
+    const empty = document.createElement("p");
+    empty.className = "empty-state";
+    empty.textContent = error.message;
+    deckList.append(empty);
+    setDashboardStatus("Could not load deck summary.");
+    return null;
+  }
 }
 
 function setCurrentCard(card) {
@@ -365,8 +378,12 @@ importForm.addEventListener("submit", async (event) => {
   }
 });
 
-setMode("setup");
-await refreshDashboard();
-updateProgress(null);
-updateCardDetails(null);
-setImportError("");
+async function init() {
+  setMode("setup");
+  updateProgress(null);
+  updateCardDetails(null);
+  setImportError("");
+  await refreshDashboard();
+}
+
+init();
