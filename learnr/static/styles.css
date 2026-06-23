@@ -22,12 +22,16 @@ body[data-mode="setup"] .progress-wrap {
   display: none;
 }
 
+body[data-mode="ready"] .topbar,
+body[data-mode="ready"] .dashboard,
+body[data-mode="ready"] .review-panel,
 body[data-mode="reviewing"] .topbar,
 body[data-mode="reviewing"] .dashboard,
 body[data-mode="reviewing"] .review-panel {
   display: none;
 }
 
+body[data-mode="ready"] .app-shell,
 body[data-mode="reviewing"] .app-shell {
   width: min(760px, calc(100% - 32px));
   min-height: 100vh;
@@ -35,19 +39,30 @@ body[data-mode="reviewing"] .app-shell {
   grid-template-rows: auto 1fr;
 }
 
+body[data-mode="ready"] .progress-wrap,
 body[data-mode="reviewing"] .progress-wrap {
   margin-bottom: 16px;
 }
 
+body[data-mode="ready"] .study-layout,
 body[data-mode="reviewing"] .study-layout {
   grid-template-columns: 1fr;
   justify-items: center;
   align-items: center;
 }
 
+body[data-mode="ready"] .canvas-wrap,
 body[data-mode="reviewing"] .canvas-wrap {
   width: min(620px, 100%);
   max-height: calc(100vh - 112px);
+}
+
+body:not([data-mode="ready"]) .session-ready-card {
+  display: none;
+}
+
+body[data-mode="ready"] canvas {
+  display: none;
 }
 
 button,
@@ -327,6 +342,26 @@ label {
 .canvas-wrap {
   width: min(520px, 100%);
   aspect-ratio: 3 / 4;
+}
+
+.session-ready-card {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  width: 100%;
+  height: 100%;
+  border: 1px solid #dce3e9;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 14px 38px rgb(23 32 38 / 10%);
+  cursor: pointer;
+  padding: 28px;
+  text-align: center;
+}
+
+.session-ready-card:focus-visible {
+  outline: 3px solid rgb(23 107 135 / 38%);
+  outline-offset: 4px;
 }
 
 canvas {

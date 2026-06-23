@@ -23,6 +23,8 @@ const progressBar = document.querySelector("#progressBar");
 const directionText = document.querySelector("#directionText");
 const reviewCountText = document.querySelector("#reviewCountText");
 const tagsText = document.querySelector("#tagsText");
+const readyCardCount = document.querySelector("#readyCardCount");
+const sessionReadyCard = document.querySelector("#sessionReadyCard");
 
 const state = {
   session: null,
@@ -111,6 +113,10 @@ function updateCardDetails(card) {
 
 function pluralize(count, singular, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function updateReadyCardCount(count) {
+  readyCardCount.textContent = pluralize(count, "card");
 }
 
 function reviewedPercent(summary) {
@@ -220,6 +226,9 @@ function setCurrentCard(card) {
 
 function showNextQueuedCard() {
   const card = state.cardById.get(state.queue[0]) || null;
+  if (card) {
+    setMode("reviewing");
+  }
   setCurrentCard(card);
   updateProgress(state.session);
   if (!card) {
@@ -227,7 +236,6 @@ function showNextQueuedCard() {
     setStatus(state.session?.target_count ? "Session complete." : "No due cards.");
     return;
   }
-  setMode("reviewing");
   setStatus(`${state.queue.length} card${state.queue.length === 1 ? "" : "s"} remaining.`);
 }
 
@@ -238,6 +246,21 @@ function loadSessionPayload(payload) {
   state.cardById = new Map(cards.map((card) => [card.id, card]));
   state.queue = cards.map((card) => card.id);
   state.progress = new Map(cards.map((card) => [card.id, "pending"]));
+  setCurrentCard(null);
+  updateProgress(state.session);
+  if (!cards.length) {
+    setMode("setup");
+    setStatus("No due cards.");
+    return;
+  }
+  updateReadyCardCount(cards.length);
+  setMode("ready");
+  setStatus("Ready when you are.");
+  sessionReadyCard.focus();
+}
+
+function beginQueuedCards() {
+  if (!state.session || !state.queue.length) return;
   showNextQueuedCard();
 }
 
@@ -283,6 +306,16 @@ async function startReview(deckId) {
 
 startAllSessionButton.addEventListener("click", async () => {
   await startReview(null);
+});
+
+sessionReadyCard.addEventListener("click", () => {
+  beginQueuedCards();
+});
+
+sessionReadyCard.addEventListener("keydown", (event) => {
+  if (event.key !== " " && event.key !== "Enter") return;
+  event.preventDefault();
+  beginQueuedCards();
 });
 
 openImportDialogButton.addEventListener("click", () => {
