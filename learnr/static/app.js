@@ -52,6 +52,7 @@ function setStatus(message) {
 
 function setDashboardStatus(message) {
   dashboardStatus.textContent = message;
+  dashboardStatus.hidden = !message;
 }
 
 function setMode(mode) {
@@ -191,11 +192,7 @@ function renderDashboard(summary) {
   totalCards.textContent = String(summary.total.total_cards);
   startAllSessionButton.disabled = !summary.total.due_review_cards && !summary.total.new_cards;
   startAllSessionButton.textContent = actionLabel(summary.total);
-  setDashboardStatus(
-    summary.total.total_cards
-      ? `${pluralize(summary.total.due_review_cards, "due review")} across ${pluralize(summary.decks.length, "deck")}.`
-      : "Import cards to begin.",
-  );
+  setDashboardStatus(summary.total.total_cards ? "" : "Import cards to begin.");
 
   deckList.innerHTML = "";
   if (!summary.decks.length) {
