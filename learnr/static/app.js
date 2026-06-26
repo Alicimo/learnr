@@ -141,13 +141,6 @@ function actionLabel(summary) {
   return "No Cards Due";
 }
 
-function dueBreakdown(summary) {
-  if (!summary.due_review_cards) {
-    return "No review cards due right now.";
-  }
-  return `${pluralize(summary.due_forward_cards, "forward")} · ${pluralize(summary.due_reverse_cards, "reverse")}`;
-}
-
 function renderDeckCard(summary) {
   const article = document.createElement("article");
   article.className = "deck-card";
@@ -155,21 +148,26 @@ function renderDeckCard(summary) {
   const title = document.createElement("h3");
   title.textContent = summary.name;
 
-  const stats = document.createElement("p");
-  stats.className = "deck-stats";
-  stats.textContent = `${pluralize(summary.total_cards, "card")} · ${pluralize(summary.due_review_cards, "due review")} · ${pluralize(summary.new_cards, "new card")} · ${reviewedLabel(summary)}`;
+  const titleRow = document.createElement("div");
+  titleRow.className = "deck-card-title-row";
+  titleRow.append(title);
+  if (summary.due_review_cards) {
+    const dueBadge = document.createElement("span");
+    dueBadge.className = "deck-due-badge";
+    dueBadge.textContent = pluralize(summary.due_review_cards, "due");
+    titleRow.append(dueBadge);
+  }
 
   const meter = document.createElement("div");
   meter.className = "deck-meter";
-  meter.setAttribute("aria-label", `${summary.due_review_cards} due reviews`);
+  meter.setAttribute(
+    "aria-label",
+    `${reviewedLabel(summary)}, ${pluralize(summary.due_review_cards, "due review")}, ${pluralize(summary.new_cards, "new card")}`,
+  );
   const meterFill = document.createElement("span");
   const dueRatio = summary.total_cards ? summary.due_review_cards / summary.total_cards : 0;
   meterFill.style.width = `${Math.min(100, Math.round(dueRatio * 100))}%`;
   meter.append(meterFill);
-
-  const breakdown = document.createElement("p");
-  breakdown.className = "deck-breakdown";
-  breakdown.textContent = dueBreakdown(summary);
 
   const startButton = document.createElement("button");
   startButton.type = "button";
@@ -181,7 +179,7 @@ function renderDeckCard(summary) {
 
   const details = document.createElement("div");
   details.className = "deck-card-details";
-  details.append(title, stats, meter, breakdown);
+  details.append(titleRow, meter);
   article.append(details, startButton);
   return article;
 }
