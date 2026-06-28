@@ -114,15 +114,34 @@ select {
 }
 
 .topbar {
-  display: grid;
-  align-items: flex-start;
-  gap: 18px;
   margin-bottom: 18px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-mark {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: #172026;
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 h1 {
   margin: 0;
-  font-size: 1.8rem;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1;
   letter-spacing: 0;
 }
 
